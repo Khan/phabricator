@@ -104,12 +104,13 @@ return array(
   // read_config does merging on sub-arrays properly, so I repeat it
   // just to be safe.)
   'syntax.filemap' => array(
-    '@\.arcconfig$@' => 'js',
-    '@\.arclint$@' => 'js',
-    '@\.q$@' => 'mysql',
-    '@\.jsx$@' => 'jsx',
+    '@\\.arcconfig$@' => 'js',
+    '@\\.arclint$@' => 'js',
+    '@\\.q$@' => 'mysql',
+    '@\\.jsx$@' => 'jsx',
+    '@\\.ssr-snap$@' => 'js',
     '@\\.html$@' => 'html+jinja',
-    '@\\.md$@' => 'markdown',
+    '@\\.md$@' => 'md',
     '@\\.kt$@' => 'kotlin',
     '@\\.kts$@' => 'kotlin',
   ),
