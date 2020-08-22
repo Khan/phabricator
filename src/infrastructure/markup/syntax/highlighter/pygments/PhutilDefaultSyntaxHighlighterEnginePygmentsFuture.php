@@ -27,10 +27,7 @@ final class PhutilDefaultSyntaxHighlighterEnginePygmentsFuture
       return phutil_safe_html($body);
     }
 
-    // TODO(csilvers): remove this `return`, and go back to the throw,
-    // once epriestley has resolved https://admin.phacility.com/PHI1764
-    return id(new PhutilDefaultSyntaxHighlighter())->getHighlightFuture($this->source)->resolve();
-    // throw new PhutilSyntaxHighlighterException($body, $status->getStatusCode());
+    throw new PhutilSyntaxHighlighterException($body, $status->getStatusCode());
   }
 
 }
