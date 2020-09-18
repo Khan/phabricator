@@ -2241,6 +2241,45 @@ final class PhabricatorRepository extends PhabricatorRepositoryDAO
     return $client;
   }
 
+  public function newConduitClientForRequest(ConduitAPIRequest $request) {
+    // Figure out whether we're going to handle this request on this device,
+    // or proxy it to another node in the cluster.
+
+    // If this is a cluster request and we need to proxy, we'll explode here
+    // to prevent infinite recursion.
+
+    $viewer = $request->getViewer();
+    $is_cluster_request = $request->getIsClusterRequest();
+
+    $client = $this->newConduitClient(
+      $viewer,
+      $is_cluster_request);
+
+    return $client;
+  }
+
+  public function newConduitFuture(
+    PhabricatorUser $viewer,
+    $method,
+    array $params,
+    $never_proxy = false) {
+
+    $client = $this->newConduitClient(
+      $viewer,
+      $never_proxy);
+
+    if (!$client) {
+      $result = id(new ConduitCall($method, $params))
+        ->setUser($viewer)
+        ->execute();
+      $future = new ImmediateFuture($result);
+    } else {
+      $future = $client->callMethod($method, $params);
+    }
+
+    return $future;
+  }
+
   public function getPassthroughEnvironmentalVariables() {
     $env = $_ENV;
 
