@@ -42,11 +42,6 @@ return array(
   'differential.require-test-plan-field' => false,
   'differential.allow-reopen' => true,
 
-  // Tell hipchat about phabricator reviews being created, and the like.
-  'feed.http-hooks' => array(
-     'https://khan-webhooks.appspot.com/phabricator-feed'
-  ),
-
   // Custom Maniphest fields
   'maniphest.custom-field-definitions' => array(
     'khan:duedate' => array(
