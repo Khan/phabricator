@@ -35,22 +35,27 @@ final class DiffusionBrowseQueryConduitAPIMethod
   protected function getGitResult(ConduitAPIRequest $request) {
     $drequest = $this->getDiffusionRequest();
     $repository = $drequest->getRepository();
+
     $path = $request->getValue('path');
+    if (!strlen($path) || $path === '/') {
+      $path = null;
+    }
+
     $commit = $request->getValue('commit');
     $offset = (int)$request->getValue('offset');
     $limit = (int)$request->getValue('limit');
     $result = $this->getEmptyResultSet();
 
-    if ($path == '') {
+    if ($path === null) {
       // Fast path to improve the performance of the repository view; we know
       // the root is always a tree at any commit and always exists.
-      $stdout = 'tree';
+      $path_type = 'tree';
     } else {
       try {
         list($stdout) = $repository->execxLocalCommand(
-          'cat-file -t -- %s:%s',
-          $commit,
-          $path);
+          'cat-file -t -- %s',
+          sprintf('%s:%s', $commit, $path));
+        $path_type = trim($stdout);
       } catch (CommandException $e) {
         // The "cat-file" command may fail if the path legitimately does not
         // exist, but it may also fail if the path is a submodule. This can
@@ -110,7 +115,7 @@ final class DiffusionBrowseQueryConduitAPIMethod
       }
     }
 
-    if (trim($stdout) == 'blob') {
+    if ($path_type === 'blob') {
       $result->setReasonForEmptyResultSet(
         DiffusionBrowseResultSet::REASON_IS_FILE);
       return $result;
@@ -121,18 +126,24 @@ final class DiffusionBrowseQueryConduitAPIMethod
       return $result;
     }
 
-    list($stdout) = $repository->execxLocalCommand(
-      'ls-tree -z -l %s -- %s',
-      gitsprintf('%s', $commit),
-      $path);
+    if ($path === null) {
+      list($stdout) = $repository->execxLocalCommand(
+        'ls-tree -z -l %s --',
+        gitsprintf('%s', $commit));
+    } else {
+      if ($path_type === 'tree') {
+        $path = rtrim($path, '/').'/';
+      } else {
+        $path = rtrim($path, '/');
+      }
+
+      list($stdout) = $repository->execxLocalCommand(
+        'ls-tree -z -l %s -- %s',
+        gitsprintf('%s', $commit),
+        $path);
+    }
 
     $submodules = array();
-
-    if (strlen($path)) {
-      $prefix = rtrim($path, '/').'/';
-    } else {
-      $prefix = '';
-    }
 
     $count = 0;
     $results = array();
@@ -156,7 +167,7 @@ final class DiffusionBrowseQueryConduitAPIMethod
             $line));
       }
 
-      list($mode, $type, $hash, $size, $name) = $parts;
+      list($mode, $type, $hash, $size, $full_path) = $parts;
 
       $path_result = new DiffusionRepositoryPath();
 
@@ -174,8 +185,14 @@ final class DiffusionBrowseQueryConduitAPIMethod
         }
       }
 
-      $path_result->setFullPath($prefix.$name);
-      $path_result->setPath($name);
+      if ($path === null) {
+        $local_path = $full_path;
+      } else {
+        $local_path = basename($full_path);
+      }
+
+      $path_result->setFullPath($full_path);
+      $path_result->setPath($local_path);
       $path_result->setHash($hash);
       $path_result->setFileType($file_type);
       $path_result->setFileSize($size);
@@ -226,11 +243,11 @@ final class DiffusionBrowseQueryConduitAPIMethod
           $dict[$key] = $value;
         }
 
-        foreach ($submodules as $path) {
-          $full_path = $path->getFullPath();
+        foreach ($submodules as $submodule_path) {
+          $full_path = $submodule_path->getFullPath();
           $key = 'submodule.'.$full_path.'.url';
           if (isset($dict[$key])) {
-            $path->setExternalURI($dict[$key]);
+            $submodule_path->setExternalURI($dict[$key]);
           }
         }
       }

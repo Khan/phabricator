@@ -36,7 +36,7 @@ final class PhabricatorRepositoryCommit
   const IMPORTED_PUBLISH = 8;
   const IMPORTED_ALL = 11;
 
-  const IMPORTED_CLOSEABLE = 1024;
+  const IMPORTED_PERMANENT = 1024;
   const IMPORTED_UNREACHABLE = 2048;
 
   private $commitData = self::ATTACHABLE;
@@ -312,14 +312,14 @@ final class PhabricatorRepositoryCommit
 
     foreach ($requests as $request) {
       switch ($request->getAuditStatus()) {
-        case PhabricatorAuditStatusConstants::AUDIT_REQUIRED:
-        case PhabricatorAuditStatusConstants::AUDIT_REQUESTED:
+        case PhabricatorAuditRequestStatus::AUDIT_REQUIRED:
+        case PhabricatorAuditRequestStatus::AUDIT_REQUESTED:
           $any_need = true;
           break;
-        case PhabricatorAuditStatusConstants::ACCEPTED:
+        case PhabricatorAuditRequestStatus::ACCEPTED:
           $any_accept = true;
           break;
-        case PhabricatorAuditStatusConstants::CONCERNED:
+        case PhabricatorAuditRequestStatus::CONCERNED:
           $any_concern = true;
           break;
       }
@@ -467,7 +467,7 @@ final class PhabricatorRepositoryCommit
   }
 
   public function isPermanentCommit() {
-    return (bool)$this->isPartiallyImported(self::IMPORTED_CLOSEABLE);
+    return (bool)$this->isPartiallyImported(self::IMPORTED_PERMANENT);
   }
 
   public function newCommitAuthorView(PhabricatorUser $viewer) {
@@ -526,6 +526,12 @@ final class PhabricatorRepositoryCommit
   private function getRawCommitterStringForDisplay() {
     $data = $this->getCommitData();
     return $data->getCommitterString();
+  }
+
+  public function getCommitMessageForDisplay() {
+    $data = $this->getCommitData();
+    $message = $data->getCommitMessage();
+    return $message;
   }
 
   public function newCommitRef(PhabricatorUser $viewer) {
@@ -939,7 +945,10 @@ final class PhabricatorRepositoryCommit
   }
 
   public function getConduitSearchAttachments() {
-    return array();
+    return array(
+      id(new DiffusionAuditorsSearchEngineAttachment())
+        ->setAttachmentKey('auditors'),
+    );
   }
 
 
